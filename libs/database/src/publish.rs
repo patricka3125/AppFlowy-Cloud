@@ -623,7 +623,7 @@ pub async fn select_all_published_collab_info(
   pg_pool: &PgPool,
   workspace_id: &Uuid,
 ) -> Result<Vec<PublishInfo>, AppError> {
-  let mut res = sqlx::query_as!(
+  let mut res: Vec<PublishInfo> = sqlx::query_as!(
     PublishInfo,
     r#"
       SELECT

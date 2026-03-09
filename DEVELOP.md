@@ -28,7 +28,40 @@ sudo dnf install -y protobuf-compiler protobuf-devel
 
 ---
 
-## 1. Configure environment
+## Quick start (all-in-one script)
+
+If you want to skip the manual steps below, use the bundled setup script which handles Docker, migrations, and building automatically:
+
+```bash
+cp dev.env .env
+
+# First time / after wiping the DB — starts services, runs migrations, builds:
+./script/run_local_server.sh --reset
+
+# Subsequent runs — starts services, skips migrations, builds:
+./script/run_local_server.sh
+```
+
+| Flag | Effect |
+|---|---|
+| `--reset` | Creates the database and runs all SQL migrations |
+| `--sqlx` | Regenerates SQLx offline metadata (`cargo sqlx prepare --workspace`) |
+
+The script also auto-sets `GOTRUE_MAILER_AUTOCONFIRM=true` for the duration of the run.
+
+> **Additional prerequisites for the script:** The script uses `psql` to health-check Postgres and `sqlx-cli` for migrations. Install them before running:
+> ```bash
+> sudo dnf install -y postgresql          # provides psql
+> cargo install sqlx-cli --no-default-features --features postgres --locked
+> ```
+
+> If you prefer to run each step yourself, follow the manual instructions below.
+
+---
+
+## Manual setup
+
+### 1. Configure environment
 
 Copy the template environment file:
 
@@ -45,7 +78,7 @@ GOTRUE_MAILER_AUTOCONFIRM=true
 
 ---
 
-## 2. Start infrastructure services
+### 2. Start infrastructure services
 
 Bring up the required Docker services (PostgreSQL, Redis, Minio, GoTrue, pgAdmin, AppFlowy Web):
 
@@ -59,7 +92,7 @@ docker compose -f docker-compose-dev.yml --env-file .env up -d
 
 ---
 
-## 3. Run database migrations
+### 3. Run database migrations
 
 Install the `sqlx` CLI (Postgres-only build, locked to the version used by this project), source the dev environment variables, then apply all pending migrations:
 
@@ -77,7 +110,7 @@ sqlx migrate run
 
 ---
 
-## 4. Run AppFlowy-Cloud
+### 4. Run AppFlowy-Cloud
 
 ```bash
 cargo run
@@ -87,7 +120,7 @@ The API server will start and listen on the port configured in `dev.env` (defaul
 
 ---
 
-## 5. Access the web app
+### 5. Access the web app
 
 The `appflowy_web` container (added to `docker-compose-dev.yml`) serves the AppFlowy Web frontend:
 

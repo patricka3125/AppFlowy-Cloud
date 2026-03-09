@@ -223,7 +223,7 @@ pub fn get_configuration() -> Result<Config, anyhow::Error> {
       min_client_version: get_env_var("APPFLOWY_WEBSOCKET_CLIENT_MIN_VERSION", "0.5.0").parse()?,
     },
     redis_uri: get_env_var("APPFLOWY_REDIS_URI", "redis://localhost:6379").into(),
-    redis_worker_count: get_env_var("APPFLOWY_REDIS_WORKERS", "60").parse()?,
+    redis_worker_count: get_env_var("APPFLOWY_REDIS_WORKERS", "2").parse()?,
     s3: S3Setting {
       create_bucket: get_env_var("APPFLOWY_S3_CREATE_BUCKET", "true")
         .parse()

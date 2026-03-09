@@ -209,7 +209,7 @@ pub fn get_configuration() -> Result<Config, anyhow::Error> {
       s3_collab_threshold: get_env_var("APPFLOWY_COLLAB_S3_THRESHOLD", "8000").parse()?,
     },
     redis_uri: get_env_var("APPFLOWY_REDIS_URI", "redis://localhost:6379").into(),
-    redis_worker_count: get_env_var("APPFLOWY_REDIS_WORKERS", "60").parse()?,
+    redis_worker_count: get_env_var("APPFLOWY_REDIS_WORKERS", "2").parse()?,
     ai: AISettings {
       port: get_env_var("AI_SERVER_PORT", "5001").parse()?,
       host: get_env_var("AI_SERVER_HOST", "localhost"),

@@ -102,5 +102,15 @@ services:
     volumes:
       - ./docker/pgadmin/servers.json:/pgadmin4/servers.json
 
+  appflowy_web:
+    restart: on-failure
+    image: appflowyinc/appflowy_web:${APPFLOWY_WEB_VERSION:-latest}
+    ports:
+      - 3000:80
+    environment:
+      - APPFLOWY_BASE_URL=http://localhost:8000
+      - APPFLOWY_GOTRUE_BASE_URL=http://localhost:9999
+      - APPFLOWY_WS_BASE_URL=ws://localhost:8000/ws
+
 volumes:
   postgres_data:

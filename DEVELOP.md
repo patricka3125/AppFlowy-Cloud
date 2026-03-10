@@ -153,3 +153,82 @@ The `appflowy_web` container (added to `docker-compose-dev.yml`) serves the AppF
 | `protoc` not found | Protobuf compiler missing | `sudo dnf install -y protobuf-compiler` |
 | "Error sending confirmation mail" on signup | `GOTRUE_MAILER_AUTOCONFIRM` is `false` | Set to `true` in `dev.env`, re-copy to `.env`, restart GoTrue |
 | GoTrue ignoring `.env` values | Podman-compose doesn't auto-read `.env` | Use `--env-file .env` in all compose commands |
+| Web app 404s on API calls (e.g. `/notifications/unread-count`) | `appflowy_web:latest` is newer than the server | Pin web image to `0.9.163` — see below ↓ |
+
+---
+
+### Web app API 404s — version mismatch between web client and server
+
+**Symptom:** The workspace loads but the browser console shows many 404 errors like:
+
+```
+GET http://localhost:8000/api/workspace/.../notifications/unread-count 404 (Not Found)
+```
+
+**Root cause:** `appflowy_web:latest` tracks the newest release (e.g. `0.11.x`) and calls API endpoints that don't exist in the older `dev` branch server code.
+
+**Fix:** The `docker-compose-dev.yml` pins the web image to `0.9.163` (the last `0.9.x` release, which matches this server branch). If the container is running a newer image, force-recreate it:
+
+```bash
+docker compose -f docker-compose-dev.yml --env-file .env up -d --force-recreate appflowy_web
+```
+
+> **Tip:** You can override the version without editing the compose file by setting `APPFLOWY_WEB_VERSION` in `.env`:
+> ```
+> APPFLOWY_WEB_VERSION=0.9.163
+> ```
+
+---
+
+### Logging in to the web app when GoTrue CORS blocks the browser
+
+The web app at `localhost:3000` makes direct cross-origin requests to GoTrue on port `9999`. If CORS blocks the login form, you can bypass it by getting a token via curl and injecting it into the browser's `localStorage` manually.
+
+**Step 1 — Create a user (first time only):**
+
+```bash
+curl -s -X POST "http://localhost:9999/signup" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "dev@example.com", "password": "password"}'
+```
+
+**Step 2 — Get an access token:**
+
+```bash
+curl -s -X POST "http://localhost:9999/token?grant_type=password" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "dev@example.com", "password": "password"}'
+```
+
+Copy the full JSON response. Note the `access_token` field — you'll need it in the next steps.
+
+**Step 3 — Register the user with AppFlowy-Cloud:**
+
+The GoTrue token alone isn't enough — AppFlowy-Cloud has its own user/workspace records that are created on first login. Trigger registration by calling the verify endpoint with the token from step 2:
+
+```bash
+ACCESS_TOKEN="<paste access_token value here>"
+
+curl -s "http://localhost:8000/api/user/verify/${ACCESS_TOKEN}"
+```
+
+You should get back `{"code":0,"data":{"is_new":true},...}`. If `is_new` is `true`, the user and default workspace were just created in the AppFlowy-Cloud database.
+
+**Step 4 — Inject it into the browser:**
+
+Open `http://localhost:3000`, then open DevTools (**F12 → Console**) and paste the following, replacing the `{}` with the full JSON from step 2:
+
+```javascript
+const gotrueResp = { /* paste full curl JSON response here */ };
+
+function decodeJWT(token) {
+  try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
+}
+const userInfo = decodeJWT(gotrueResp.access_token);
+if (userInfo) gotrueResp.user = { id: userInfo.sub, email: userInfo.email };
+
+localStorage.setItem('token', JSON.stringify(gotrueResp));
+window.location.href = '/app';
+```
+
+> **Note:** After a `--reset` (DB wipe), existing users are deleted. Re-run step 1 to recreate your account.

@@ -21,6 +21,7 @@ flake.lock
 
 **/.DS_Store
 **/.env.*
+.git
 
 docker-compose.override.yml
 .serena
